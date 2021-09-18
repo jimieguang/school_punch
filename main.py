@@ -6,6 +6,7 @@
 #2.5更新日志: 更改了群消息推送,并将报错信息单独推送给群主
 #2.6更新日志：改动了部分post内容以模拟提交位置信息
 #3.0更新日志：将打卡信息迁移至服务器上，增强可移植性
+#3.1更新日志：由于滑块验证码的存在，改进程序以绕过，破解留待日后进行
 import requests
 import json
 import datetime #获取系统时间
@@ -39,37 +40,25 @@ url_punch = 'https://stuhealth.jnu.edu.cn/api/write/main'
 
 def get_userinfos():
     '''以列表形式返回用户信息'''
-    url = 'https://www.hlamemastar.top/punch/punch.txt'
+    #此处改动以暂时性打卡
+    url = 'https://www.hlamemastar.top/punch/temp.txt'
     response = requests.get(url)
     infos = response.content
     infos = infos.decode('utf-8')
     infos = infos.split("\r\n")
     return infos
 
-def login(url_login,payload_login,header):
-    '''检查是否已打卡'''
-    payload_login = json.dumps(payload_login)
-    #post传入的数据是json类型
-    #增加了请求超时设定 timeout=2
-    info_login = requests.post(url_login, data = payload_login, headers = header,timeout = 5)
-    #关闭请求，释放内存
-    info_login.close()
-    return info_login.text
 
-def get(url_get,info_login,header):
+def get(url_get,jnuid,header):
     '''如果今天未打卡，则提取打卡信息'''
-    dict_login = json.loads(info_login)
-    global jnuid
-    jnuid = dict_login['data']['jnuid']
-    idtype = dict_login['data']['idtype']
-    payload_get = {"jnuid":"%s"%jnuid,"idType":"%s"%idtype}
-    payload_get = json.dumps(payload_get)
+    payload_get = {"jnuid":"%s"%jnuid,"idType":"1"}
+    # payload_get = json.dumps(payload_get)
     info_get = requests.post(url_get,data = payload_get,headers=header, timeout = 2)
     #关闭请求，释放内存
     info_get.close()
     return info_get.text
 
-def punch(url_punch,info_get,header):
+def punch(url_punch,info_get,header,jnuid):
     '''进行打卡操作'''
     dict_get = json.loads(info_get)
     #将获取数据中非空字符串提取出来
@@ -129,30 +118,19 @@ def main():
     infos = get_userinfos()
     try:
         for info in infos:
-            account = info.split()[0]
-            password = info.split()[1]
-            name = info.split()[2]
-            payload_login = {'username': "%s"%account, 'password': "%s"%password}
+            name = info.split()[0]
+            jnuid = info.split()[1]
             #设置最大重连次数与初始化
             try_num = 0
             try_max_num = 3
             while try_num < try_max_num:
                 try:
-                    info_login = login(url_login,payload_login,header)
-                    if '登录成功，今天未填写' in info_login:
-                        info_get = get(url_get,info_login,header)
-                        info_punch = punch(url_punch,info_get,header)
-                        if '成功' in info_punch:
-                            msg += '%s自动打卡已完成！\n'%name
-                        else:
-                            msg += '%s出现未知问题，请检查！\n'%name
-                    elif 'error' in info_login:
-                        msg += '%s账号密码错误，请检查！\n'%name
-                    elif '登录成功，今天已填写' in info_login:
-                        msg += '%s无需重复打卡！\n'%name
+                    info_punch = punch(url_punch,jnuid,header)
+                    if '成功' in info_punch:
+                        msg += '%s自动打卡已完成！\n'%name
                     else:
-                        msg += (info_login+'\n')
-                    break
+                        msg += '%s出现未知问题:%s\n'%(name,info_punch)
+                        break
                 except(requests.exceptions.ConnectTimeout,requests.exceptions.ReadTimeout) as e:
                     try_num += 1
                     msg_error += '%s打卡请求超时%d次！\n'%(name, try_num)
