@@ -12,10 +12,11 @@ def find_pic(order):
             r1,g1,b1 = image1.getpixel((i,j))
             r2,g2,b2 = image2.getpixel((i,j))
             if r1 !=0:
-                if ((r2)/(r1)<0.9):
+                scale = r2/r1
+                if scale < 0.9:
                     num += 1
                     image3.putpixel((i,j),(0,0,0,0))
-                if  (r2)/(r1)>1.1:
+                if  scale>1.1:
                     num += 1
                     image3.putpixel((i,j),(126,0,0,0))
     if num < 4000:
@@ -38,8 +39,9 @@ def find_distance(fileorder):
             r1,g1,b1 = image.getpixel((i,j))
             if r1 in judgelist:
                 num += 1
-        if num > 25:
+        if num > 20:
             return i
+    return 0
 
 if __name__ == "__main__":
     for i in range(1,6):

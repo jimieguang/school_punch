@@ -22,7 +22,7 @@ class CrackSlider():
         self.url = os.getcwd()+'\\code.html'
         # 声明一个谷歌配置对象
         self.opts = webdriver.ChromeOptions()    
-        # 设置成无头
+        # # 设置成无头
         self.opts.add_argument('--headless')
         self.opts.add_argument('--disable-gpu')
         # 设置开发者模式，防止被检测出来 ↓
@@ -77,8 +77,9 @@ def get_validate():
             if fileorder != 0:
                 break
         distance = find_distance(fileorder)
-        validate = cs.crack_slider(distance)
-        return validate
+        if distance != 0:
+            validate = cs.crack_slider(distance)
+    return validate
 
 if __name__ == '__main__':
     validate = get_validate()

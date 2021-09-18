@@ -165,11 +165,11 @@ def main():
                     msg_error += '错误信息为%s\n'%e
                     if try_num == try_max_num:
                         msg += '%s自动打卡失败\n'%name
-            print('%s自动打卡已完成！'%name)
+            print('请查看%s的打卡信息'%name)
     except IndexError:
         pass
     msg += get_weather(msg)
-    mail_group(msg)
+    # mail_group(msg)
     mail(msg_error)
     return msg
 
