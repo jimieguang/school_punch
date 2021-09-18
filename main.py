@@ -7,7 +7,6 @@
 #2.6更新日志：改动了部分post内容以模拟提交位置信息
 #3.0更新日志：将打卡信息迁移至服务器上，增强可移植性
 #3.2更新日志：3.1版本废弃，未考虑jnuid是动态生成的，本版本使用selenium获取validate再进行打卡（大佬的帮忙~）
-#3.3更新日志：改进了缺口匹配方式，牺牲速度以保证准确性，同时提高了效率
 import requests
 import json
 import datetime #获取系统时间
@@ -138,6 +137,7 @@ def main():
             password = info.split()[1]
             name = info.split()[2]
             validate = get_validate.get_validate()
+            print(validate)
             payload_login = {'username': "%s"%account, 'password': "%s"%password,'validate':'%s'%validate}
             #设置最大重连次数与初始化
             try_num = 0
@@ -165,7 +165,6 @@ def main():
                     msg_error += '错误信息为%s\n'%e
                     if try_num == try_max_num:
                         msg += '%s自动打卡失败\n'%name
-            print('%s自动打卡已完成！'%name)
     except IndexError:
         pass
     msg += get_weather(msg)
