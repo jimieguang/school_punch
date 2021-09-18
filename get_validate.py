@@ -20,7 +20,7 @@ class CrackSlider():
     通过浏览器截图，识别验证码中缺口位置，获取需要滑动距离，破解滑动验证码
     """
     def __init__(self):
-        self.url = './code.html'
+        self.url = r'C:\Users\Administrator\Documents\WeChat Files\wxid_abkctg1dipmy22\FileStorage\File\2021-09\破解验证码\code.html'
         # 声明一个谷歌配置对象
         self.opts = webdriver.ChromeOptions()    
         # 设置成无头
