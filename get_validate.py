@@ -9,6 +9,8 @@ import time, requests
 import re
 # from webdriver_manager.chrome import ChromeDriverManager
 
+import os
+
 # 引入自定义函数用于判断滑动距离
 from find import *
 
@@ -17,7 +19,7 @@ class CrackSlider():
     通过浏览器截图，识别验证码中缺口位置，获取需要滑动距离，破解滑动验证码
     """
     def __init__(self):
-        self.url = './code.html'
+        self.url = os.getcwd()+'\\code.html'
         # 声明一个谷歌配置对象
         self.opts = webdriver.ChromeOptions()    
         # 设置成无头
