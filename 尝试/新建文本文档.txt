@@ -1,0 +1,31 @@
+function l(e, t, i) {
+        var n = N(P(e + "::" + t));
+        return i ? i + "_" + n : n
+    }
+
+//P函数
+B = function(e) {
+        var t = "14731382d816714fC59E47De5dA0C871D3F";
+        if (null == t || void 0 == t)
+            throw new Error("1008");
+        null != e && void 0 != e || (e = "");
+        var i = e + k(e)
+          , n = c(i)
+          , r = c(t)
+          , o = L(n, r);
+        return _(o)
+    };
+
+//N函数
+function(e, t) {
+    e.exports = function(e) {
+        var t = {
+            "\\": "-",
+            "/": "_",
+            "+": "."
+        };
+        return e.replace(/[\\/+]/g, function(e) {
+            return t[e]
+        })
+    }
+}

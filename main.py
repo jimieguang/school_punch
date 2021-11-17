@@ -5,9 +5,12 @@
 #2.4更新日志：修复了打卡登录出错却显示“已打卡”的问题
 #2.5更新日志: 更改了群消息推送,并将报错信息单独推送给群主
 #2.6更新日志：改动了部分post内容以模拟提交位置信息
-#3.0更新日志：将打卡信息迁移至服务器上，增强可移植性
+#3.0更新日志：将用户信息迁移至服务器上，增强可移植性
 #3.2更新日志：3.1版本废弃，未考虑jnuid是动态生成的，本版本使用selenium获取validate再进行打卡（大佬的帮忙~）
 #3.3更新日志：改进了缺口匹配方式，牺牲速度以保证准确性，同时提高了效率
+#3.4更新日志：优化了匹配算法，速度提升至0.3秒内处理完毕
+#3.5更新日志：将打卡信息提交到服务器，便于机器人推送与查询，将天气预报模块独立，从主函数中删除
+#3.6更新日志：增加了提交错误日志的功能，增加检测今日是否已打卡的功能（若已打卡则直接退出程序）
 import requests
 import json
 import datetime #获取系统时间
@@ -137,6 +140,7 @@ def main():
             account = info.split()[0]
             password = info.split()[1]
             name = info.split()[2]
+            #获取验证码参数
             validate = get_validate.get_validate()
             payload_login = {'username': "%s"%account, 'password': "%s"%password,'validate':'%s'%validate}
             #设置最大重连次数与初始化
@@ -157,7 +161,7 @@ def main():
                     elif '登录成功，今天已填写' in info_login:
                         msg += '%s无需重复打卡！\n'%name
                     else:
-                        msg += (info_login+'\n')
+                        msg_error += (name + info_login+'\n')
                     break
                 except(requests.exceptions.ConnectTimeout,requests.exceptions.ReadTimeout) as e:
                     try_num += 1
@@ -168,25 +172,29 @@ def main():
             print('请查看%s的打卡信息'%name)
     except IndexError:
         pass
-    msg += get_weather(msg)
-    # mail_group(msg)
+    mail_web(msg)
     mail(msg_error)
     return msg
 
 
-def mail_group(msg):
-    '''将消息发送到QQ群'''
+def mail_web(msg):
+    '''将消息发送到服务器上待查询'''
     if msg !='':
-        qq = '281700803'
-        qqtalk = 'https://qmsg.zendee.cn/group/6c34b0bac7951dc116ef0c64730db7fe?msg=%s&qq=%s'%(msg,qq)
-        requests.post(qqtalk)
+        url = 'https://www.hlamemastar.top/qqrobot/punch_info.php'
+        payload = {'action':'write','infos':msg}
+        requests.post(url,data=payload)
 
 def mail(msg):
-    '''将消息发送到群主QQ'''
+    '''将消息发送到群主QQ,并将错误信息写入服务器'''
     if msg !='':
+        # 发送qq
         qq ='1137040634'
         qqtalk = 'https://qmsg.zendee.cn/send/6c34b0bac7951dc116ef0c64730db7fe?msg=%s&qq=%s'%(msg,qq)
         requests.post(qqtalk)
+        # 写入服务器
+        url = 'https://www.hlamemastar.top/qqrobot/punch_error.php'
+        payload = {'action':'write','infos':msg}
+        requests.post(url,data=payload)
 
 def get_weather(msg):
     '''获取天气信息'''
@@ -212,10 +220,26 @@ def main_handler(event, context):
     '''调用云函数'''
     return main()
 
+def detect():
+    '''检测今日是否打卡（返回值是布尔型）'''
+    url = 'https://www.hlamemastar.top/qqrobot/punch_info.txt'
+    response = requests.get(url)
+    res = response.content.decode('utf-8')
+    if "今日暂未打卡，请耐心等待" in res: 
+        return True
+    else:
+        return False
+
 if __name__ == '__main__':
+    # 如果今日已打卡，直接退出该程序
+    if not detect():
+        print('今日已打卡')
+        exit()
     #调用打卡主程序
     msg = main()
     #附加功能，如显示打卡时间
+    #添加天气预报
+    msg += get_weather(msg)
     print(msg)
     print('\n')
     #打包成exe时需取消注释

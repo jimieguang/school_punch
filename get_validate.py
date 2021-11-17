@@ -22,7 +22,7 @@ class CrackSlider():
         self.url = os.getcwd()+'\\code.html'
         # 声明一个谷歌配置对象
         self.opts = webdriver.ChromeOptions()    
-        # # 设置成无头
+        # 设置成无头
         self.opts.add_argument('--headless')
         self.opts.add_argument('--disable-gpu')
         # 设置开发者模式，防止被检测出来 ↓
@@ -37,15 +37,17 @@ class CrackSlider():
         self.driver.get(self.url)
 
     def get_pic(self):
-        time.sleep(2)
+        # 注释掉了无意义的图片获取（即template）
+        # 加入了对获取空url（None）的处理
+        time.sleep(0.5)
         target = self.wait.until(EC.presence_of_element_located((By.CLASS_NAME, 'yidun_bg-img')))
-        template = self.wait.until(EC.presence_of_element_located((By.CLASS_NAME, 'yidun_jigsaw')))
         target_link = target.get_attribute('src')
-        template_link = template.get_attribute('src')
+        while target_link==None:
+            time.sleep(0.5)
+            target_link = target.get_attribute('src')
+        # print(target_link)
         target_img = Image.open(BytesIO(requests.get(target_link).content))
-        template_img = Image.open(BytesIO(requests.get(template_link).content))
         target_img.save('target.jpg')
-        template_img.save('template.png')
 
 
 
@@ -69,18 +71,25 @@ def get_validate():
     while validate == '':
         cs = CrackSlider()
         cs.open()
-        cs.get_pic()
-
-        # 比对五个已知图片，用于确定缺口图片为哪副
-        for i in range(1,6):
-            fileorder = find_pic(i)
-            if fileorder != 0:
-                break
-        distance = find_distance(fileorder)
-        if distance != 0:
-            validate = cs.crack_slider(distance)
+        try:
+            cs.get_pic()
+            # 比对五个已知图片，用于确定缺口图片为哪副
+            for i in range(1,6):
+                fileorder = find_pic(i)
+                if fileorder != 0:
+                    break
+            distance = find_distance(fileorder)
+            if distance != 0:
+                validate = cs.crack_slider(distance)
+        except Exception as e:
+            print("存在错误，已重试：%s"%e)
+            continue
+            
     return validate
 
 if __name__ == '__main__':
+    start = time.time()
     validate = get_validate()
     print(validate)
+    end = time.time()
+    print("time: %f"%(end-start))
