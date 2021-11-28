@@ -11,12 +11,14 @@
 #3.4更新日志：优化了匹配算法，速度提升至0.3秒内处理完毕
 #3.5更新日志：将打卡信息提交到服务器，便于机器人推送与查询，将天气预报模块独立，从主函数中删除
 #3.6更新日志：增加了提交错误日志的功能，增加检测今日是否已打卡的功能（若已打卡则直接退出程序）
+#3.7更新日志：增加了推送功能，自己搭建了qq机器人，使用该功能时向服务器发出请求，发送消息给指定人/群
 import requests
 import json
 import datetime #获取系统时间
 
 
 import get_validate
+import qmsg
 
 #设置请求头，防止被发现
 header={
@@ -140,14 +142,14 @@ def main():
             account = info.split()[0]
             password = info.split()[1]
             name = info.split()[2]
-            #获取验证码参数
-            validate = get_validate.get_validate()
-            payload_login = {'username': "%s"%account, 'password': "%s"%password,'validate':'%s'%validate}
-            #设置最大重连次数与初始化
+            #设置最大重连次数与初始化（因为时效性，携带着验证码参数进行重连才可以）
             try_num = 0
             try_max_num = 3
             while try_num < try_max_num:
                 try:
+                    #获取验证码参数
+                    validate = get_validate.get_validate()
+                    payload_login = {'username': "%s"%account, 'password': "%s"%password,'validate':'%s'%validate}
                     info_login = login(url_login,payload_login,header)
                     if '登录成功，今天未填写' in info_login:
                         info_get = get(url_get,info_login,header)
@@ -161,7 +163,7 @@ def main():
                     elif '登录成功，今天已填写' in info_login:
                         msg += '%s无需重复打卡！\n'%name
                     else:
-                        msg_error += (name + info_login+'\n')
+                        msg += "未知返回数据：%s\n"%info_login
                     break
                 except(requests.exceptions.ConnectTimeout,requests.exceptions.ReadTimeout) as e:
                     try_num += 1
@@ -178,14 +180,18 @@ def main():
 
 
 def mail_web(msg):
-    '''将消息发送到服务器上待查询'''
+    '''将消息发送到服务器上待查询,并将信息推送到群里'''
     if msg !='':
+        # 发送到服务器
         url = 'https://www.hlamemastar.top/qqrobot/punch_info.php'
         payload = {'action':'write','infos':msg}
         requests.post(url,data=payload)
+        # 推送到群里
+        robot = qmsg.Robot()
+        robot.mail_group(281700803,msg)
 
 def mail(msg):
-    '''将消息发送到群主QQ,并将错误信息写入服务器'''
+    '''将消息发送到群主QQ(使用qmsg),并将错误信息写入服务器'''
     if msg !='':
         # 发送qq
         qq ='1137040634'
@@ -213,7 +219,7 @@ def get_weather(msg):
     windScaleDay = info['daily'][0]['windScaleDay']
     sunrise = info['daily'][0]['sunrise']
     sunset = info['daily'][0]['sunset']
-    msg = "\n%s天气预报\n温度:%s~%s℃\n天气:%s转%s\n风向:%s%s级\n日出时间:%s\n日落时间:%s"%(time,tempMin,tempMax,textDay,textNight,windDirDay,windScaleDay,sunrise,sunset)
+    msg += "\n%s天气预报\n温度:%s~%s℃\n天气:%s转%s\n风向:%s%s级\n日出时间:%s\n日落时间:%s"%(time,tempMin,tempMax,textDay,textNight,windDirDay,windScaleDay,sunrise,sunset)
     return msg
 
 def main_handler(event, context):
@@ -236,10 +242,13 @@ if __name__ == '__main__':
         print('今日已打卡')
         exit()
     #调用打卡主程序
-    msg = main()
+    try:
+        msg = main()
+    except Exception as e:
+        print(e)
     #附加功能，如显示打卡时间
     #添加天气预报
-    msg += get_weather(msg)
+    msg = get_weather(msg)
     print(msg)
     print('\n')
     #打包成exe时需取消注释

@@ -47,7 +47,7 @@ class CrackSlider():
             target_link = target.get_attribute('src')
         # print(target_link)
         target_img = Image.open(BytesIO(requests.get(target_link).content))
-        target_img.save('target.jpg')
+        target_img.save('./temp/target.jpg')
 
 
 

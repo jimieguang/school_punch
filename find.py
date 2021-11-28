@@ -3,8 +3,8 @@ from PIL import Image
 import time
 def find_pic(order):
     '''匹配缺口'''
-    image1 = Image.open("./text/new%d.jpg"%order)
-    image2 = Image.open("target.jpg")
+    image1 = Image.open("./test/new%d.jpg"%order)
+    image2 = Image.open("./temp/target.jpg")
 
     #转成灰度图提高匹配速度（像素值以array形式储存）
     array1 = image1.convert("L").load()
@@ -31,7 +31,7 @@ def find_pic(order):
             if(num>=Maxnum):
                 return 0
     if num < Maxnum:
-        image3.save("result-%d.png"%order)
+        image3.save("./temp/result-%d.png"%order)
         return order
     else:
         return 0
@@ -40,7 +40,7 @@ def find_distance(fileorder):
     '''找到缺口离起点的距离（像素）'''
     if fileorder == 0:
         return 0
-    image = Image.open("result-%d.png"%fileorder)
+    image = Image.open("./temp/result-%d.png"%fileorder)
     array = image.load()
     judgelist = [0,126]
     for i in range(0,320):
