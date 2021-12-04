@@ -219,7 +219,12 @@ def get_weather(msg):
     windScaleDay = info['daily'][0]['windScaleDay']
     sunrise = info['daily'][0]['sunrise']
     sunset = info['daily'][0]['sunset']
-    msg += "\n%s天气预报\n温度:%s~%s℃\n天气:%s转%s\n风向:%s%s级\n日出时间:%s\n日落时间:%s"%(time,tempMin,tempMax,textDay,textNight,windDirDay,windScaleDay,sunrise,sunset)
+    #对天气信息进行处理
+    if textDay == textNight:
+        weather_info = textDay
+    else:
+        weather_info =textDay + "转" + textNight
+    msg += f"\n{time}天气预报\n温度:{tempMin}~{tempMax}℃\n天气:{weather_info}\n风向:{windDirDay+windScaleDay}级\n日出时间:{sunrise}\n日落时间:{sunset}"
     return msg
 
 def main_handler(event, context):
