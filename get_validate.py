@@ -49,8 +49,6 @@ class CrackSlider():
         target_img = Image.open(BytesIO(requests.get(target_link).content))
         target_img.save('./temp/target.jpg')
 
-
-
     def crack_slider(self,distance):
         slider = self.wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'yidun_slider')))
         ActionChains(self.driver).click_and_hold(slider).perform()
@@ -63,12 +61,12 @@ class CrackSlider():
         self.driver.close()
         validate = re.findall(re.compile('>(.*?)</div'),validate)[0]
         return validate
-            
 
-
-def get_validate():
+def get_validate(max_num):
     validate = ''
-    while validate == '':
+    num = 0
+    while validate == '' and num <= max_num:
+        num += 1
         cs = CrackSlider()
         cs.open()
         try:
@@ -82,14 +80,14 @@ def get_validate():
             if distance != 0:
                 validate = cs.crack_slider(distance)
         except Exception as e:
-            print("存在错误，已重试：%s"%e)
+            print("获取校验码错误，已重试：%s"%e)
             continue
             
     return validate
 
 if __name__ == '__main__':
     start = time.time()
-    validate = get_validate()
+    validate = get_validate(3)
     print(validate)
     end = time.time()
     print("time: %f"%(end-start))
