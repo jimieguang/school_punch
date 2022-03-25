@@ -25,13 +25,18 @@ class CrackSlider():
         # 设置成无头
         self.opts.add_argument('--headless')
         self.opts.add_argument('--disable-gpu')
-        # 设置开发者模式，防止被检测出来 ↓
-        self.opts.add_experimental_option('excludeSwitches', ['enable-automation'])
         # 隐藏日志信息
         self.opts.add_experimental_option('excludeSwitches', ['enable-logging'])
-        # self.driver = webdriver.Chrome(ChromeDriverManager().install(),options = self.opts)  #给用户安装webdriver
+        #给用户安装webdriver
+        # self.driver = webdriver.Chrome(ChromeDriverManager().install(),options = self.opts)  
         self.driver = webdriver.Chrome(options = self.opts)
         self.wait = WebDriverWait(self.driver, 20)
+        # 伪造浏览器指纹，防止被检测出(参考资料：https://jishuin.proginn.com/p/763bfbd33b73)
+        with open('./stealth.min.js') as f:
+            js = f.read()
+        self.driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+        "source": js
+        })
 
     def open(self):
         self.driver.get(self.url)
@@ -49,8 +54,6 @@ class CrackSlider():
         target_img = Image.open(BytesIO(requests.get(target_link).content))
         target_img.save('./temp/target.jpg')
 
-
-
     def crack_slider(self,distance):
         slider = self.wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'yidun_slider')))
         ActionChains(self.driver).click_and_hold(slider).perform()
@@ -63,12 +66,12 @@ class CrackSlider():
         self.driver.close()
         validate = re.findall(re.compile('>(.*?)</div'),validate)[0]
         return validate
-            
 
-
-def get_validate():
+def get_validate(max_num):
     validate = ''
-    while validate == '':
+    num = 0
+    while validate == '' and num <= max_num:
+        num += 1
         cs = CrackSlider()
         cs.open()
         try:
@@ -82,14 +85,14 @@ def get_validate():
             if distance != 0:
                 validate = cs.crack_slider(distance)
         except Exception as e:
-            print("存在错误，已重试：%s"%e)
+            print("获取校验码错误，已重试：%s"%e)
             continue
             
     return validate
 
 if __name__ == '__main__':
     start = time.time()
-    validate = get_validate()
+    validate = get_validate(3)
     print(validate)
     end = time.time()
     print("time: %f"%(end-start))
