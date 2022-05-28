@@ -25,4 +25,3 @@ class Robot:
 if __name__ == "__main__":
     robot = Robot()
     robot.mail_private(1137040634,"test")
-    # robot.mail_group(281700803,"test")

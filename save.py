@@ -33,6 +33,14 @@ url_login = 'https://stuhealth.jnu.edu.cn/api/user/login'
 url_get = 'https://stuhealth.jnu.edu.cn/api/user/stuinfo'
 url_punch = 'https://stuhealth.jnu.edu.cn/api/write/main'
 
+def get_userinfos():
+    '''以列表形式返回用户信息'''
+    url = 'https://www.hlamemastar.top/punch/punch.txt'
+    response = requests.get(url)
+    infos = response.content
+    infos = infos.decode('utf-8')
+    infos = infos.split("\r\n")
+    return infos
 
 def login(url_login,payload_login,header):
     '''检查是否已打卡'''
@@ -177,11 +185,18 @@ def mail(msg):
 
 if __name__ == '__main__':
     # 补救名单
-    infos = ["2020100630  jYRIX-54WNs_pxtuhxE3XQ*=  游鱼半仙","2018052865  VUQW93SB7wp3w4aUDhPc0A*=  dzt","2019050199  LTS0ozthSdhv6EbQUCMogQ*=  JNU气人"]
-    # infos.append("2018053938  I50VHa9YPH7sH4Eh8iF5ow*=  cn")
+    infos = get_userinfos()
+
+    save_list = ["林饱饱","耶","cn","JNU气人","LLLLLLL","飞飞鱼","我是熊猫"]
     #调用打卡主程序
+    punch_infos = []
+    for info in infos:
+        if info == "":
+            continue
+        if info.split("  ")[2] in save_list:
+            punch_infos.append(info)
     try:
-        msg = main(infos)
+        msg = main(punch_infos)
     except Exception as e:
         print(e)
     #附加功能，如显示打卡时间

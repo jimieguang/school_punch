@@ -7,10 +7,9 @@ from selenium.webdriver.support.wait import WebDriverWait
 from io import BytesIO
 import time, requests
 import re
-# from webdriver_manager.chrome import ChromeDriverManager
+
 
 import os
-import random
 
 # 引入自定义函数用于判断滑动距离
 from find import *
@@ -21,30 +20,23 @@ class CrackSlider():
     """
     def __init__(self):
         self.url = os.getcwd()+'\\code.html'
-        # 声明一个谷歌配置对象
-        self.opts = webdriver.ChromeOptions()    
+        # 声明一个火狐配置对象
+        # self.opts = webdriver.ChromeOptions()    
+        self.opts = webdriver.FirefoxOptions()
         # 设置成无头
-        self.opts.add_argument('--headless')
-        self.opts.add_argument('--disable-gpu')
-        # 隐藏日志信息
-        self.opts.add_experimental_option('excludeSwitches', ['enable-logging'])
-        #给用户安装webdriver
-        # self.driver = webdriver.Chrome(ChromeDriverManager().install(),options = self.opts)  
-        self.driver = webdriver.Chrome(options = self.opts)
+        # self.opts.set_headless()
+
+        self.driver = webdriver.Firefox(options = self.opts)
         self.wait = WebDriverWait(self.driver, 20)
         # 伪造浏览器指纹，防止被检测出(参考资料：https://jishuin.proginn.com/p/763bfbd33b73)
-        with open('./stealth.min.js') as f:
-            js = f.read()
-        self.driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
-        "source": js
-        })
+        # with open('./stealth.min.js') as f:
+        #     js = f.read()
+        # self.driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+        # "source": js
+        # })
 
     def open(self):
         self.driver.get(self.url)
-    
-    def refresh(self):
-        # 刷新当前界面
-        self.driver.refresh()
 
     def get_pic(self):
         # 注释掉了无意义的图片获取（即template）
@@ -63,28 +55,23 @@ class CrackSlider():
         slider = self.wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'yidun_slider')))
         # time.sleep(2)
         ActionChains(self.driver).click_and_hold(slider).perform()
-        now_distance = 0
-        while now_distance < distance+5:
-            add_distance = random.randint(5,10)
-            now_distance += add_distance
-            ActionChains(self.driver).move_by_offset(xoffset=add_distance, yoffset=0).perform()
-        ActionChains(self.driver).move_by_offset(xoffset=distance+8-now_distance, yoffset=0).perform()
-        # ActionChains(self.driver).move_by_offset(xoffset=distance+8, yoffset=0).perform()
+        ActionChains(self.driver).move_by_offset(xoffset=distance+8, yoffset=0).perform()
         ActionChains(self.driver).release().perform()
         
         validate_element = self.driver.find_element_by_id('validate')
-        # validate_element = self.driver.find_element(By.ID,"validate")  # 4.0更新的用法
         time.sleep(0.5)
         validate = validate_element.get_attribute('outerHTML')
-        # self.driver.close()
+        self.driver.close()
         validate = re.findall(re.compile('>(.*?)</div'),validate)[0]
         return validate
 
-def get_validate(validate_list):
+def get_validate(max_num):
     validate = ''
-    cs = CrackSlider()
-    cs.open()
-    while True:
+    num = 0
+    while validate == '' and num <= max_num:
+        num += 1
+        cs = CrackSlider()
+        cs.open()
         try:
             cs.get_pic()
             # 比对五个已知图片，用于确定缺口图片为哪副
@@ -97,32 +84,13 @@ def get_validate(validate_list):
                 validate = cs.crack_slider(distance)
         except Exception as e:
             print("获取校验码错误，已重试：%s"%e)
-            cs.refresh()
             continue
-        if validate != "":
-            validate_list.append(validate)
-        cs.refresh()
+            
+    return validate
 
 if __name__ == '__main__':
-    import threading
-    class myThread (threading.Thread):   #继承父类threading.Thread
-        """多线程类"""
-        def __init__(self, threadID, function_name,list):
-            threading.Thread.__init__(self)
-            self.threadID = threadID
-            self.func = function_name
-            self.list = list
-        def run(self):                   #把要执行的代码写到run函数里面 线程在创建后会直接运行run函数 
-            print("Starting " + self.threadID)
-            self.func(self.list)
-    validate_list = []
-    thread1 = myThread("1", get_validate, validate_list)
-    thread1.start()
-    def f2(validate_list):
-        while True:
-            print(f"len:{len(validate_list)}")
-            if len(validate_list)!=0:
-                print(validate_list.pop())
-            time.sleep(1)
-    thread2 = myThread("2", f2, validate_list)
-    thread2.start()
+    start = time.time()
+    validate = get_validate(3)
+    print(validate)
+    end = time.time()
+    print("time: %f"%(end-start))
