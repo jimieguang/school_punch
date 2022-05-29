@@ -26,7 +26,6 @@ import get_validate
 import qmsg
 import punch
 
-
 def get_weather(msg):
     '''获取天气信息'''
     params = 'key=c0a288bbaa1f4ab3a64dfd6213d24074&location=101280704'
@@ -88,9 +87,3 @@ if __name__ == '__main__':
     except Exception as e:
         print(e)
     #附加功能，如显示打卡时间
-    #添加天气预报
-    msg = get_weather(msg)
-    print(msg)
-    print('\n')
-    #打包成exe时需取消注释
-    input('按enter键退出程序')

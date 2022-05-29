@@ -63,13 +63,7 @@ class CrackSlider():
         slider = self.wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'yidun_slider')))
         # time.sleep(2)
         ActionChains(self.driver).click_and_hold(slider).perform()
-        now_distance = 0
-        while now_distance < distance+5:
-            add_distance = random.randint(5,10)
-            now_distance += add_distance
-            ActionChains(self.driver).move_by_offset(xoffset=add_distance, yoffset=0).perform()
-        ActionChains(self.driver).move_by_offset(xoffset=distance+8-now_distance, yoffset=0).perform()
-        # ActionChains(self.driver).move_by_offset(xoffset=distance+8, yoffset=0).perform()
+        ActionChains(self.driver).move_by_offset(xoffset=distance+8, yoffset=0).perform()
         ActionChains(self.driver).release().perform()
         
         validate_element = self.driver.find_element_by_id('validate')
@@ -81,10 +75,11 @@ class CrackSlider():
         return validate
 
 def get_validate(validate_list):
-    validate = ''
     cs = CrackSlider()
     cs.open()
     while True:
+        cs = CrackSlider()
+        cs.open()
         try:
             cs.get_pic()
             # 比对五个已知图片，用于确定缺口图片为哪副
@@ -95,12 +90,10 @@ def get_validate(validate_list):
             distance = find_distance(fileorder)
             if distance != 0:
                 validate = cs.crack_slider(distance)
+            if validate != "": 
+                validate_list.append(validate)
         except Exception as e:
             print("获取校验码错误，已重试：%s"%e)
-            cs.refresh()
-            continue
-        if validate != "":
-            validate_list.append(validate)
         cs.refresh()
 
 if __name__ == '__main__':

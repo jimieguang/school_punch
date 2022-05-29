@@ -117,7 +117,7 @@ def punch(url_punch,info_get,header):
     return info_punch.text
 
 
-def main(infos):
+def main(infos,validate=''):
     '''主要的执行函数'''
     msg = ""
     #保存错误日志
@@ -133,8 +133,8 @@ def main(infos):
             while try_num < try_max_num:
                 try:
                     #获取验证码参数
-                    validate = get_validate.get_validate(3)
-                    # validate = input("please enter a valid:")
+                    if validate=="":
+                        validate = get_validate.get_validate()
                     payload_login = {'username': "%s"%account, 'password': "%s"%password,'validate':'%s'%validate}
                     info_login = login(url_login,payload_login,header)
                     if '登录成功，今天未填写' in info_login:
