@@ -24,8 +24,7 @@ class CrackSlider():
         # 声明一个谷歌配置对象
         self.opts = webdriver.ChromeOptions()    
         # 设置成无头
-        self.opts.add_argument('--headless')
-        self.opts.add_argument('--disable-gpu')
+        self.opts.set_headless()
         # 隐藏日志信息
         self.opts.add_experimental_option('excludeSwitches', ['enable-logging'])
         #给用户安装webdriver
@@ -45,6 +44,10 @@ class CrackSlider():
     def refresh(self):
         # 刷新当前界面
         self.driver.refresh()
+    
+    def stop(self):
+        # 关闭浏览器，停止程序
+        self.driver.close()
 
     def get_pic(self):
         # 注释掉了无意义的图片获取（即template）
@@ -61,7 +64,6 @@ class CrackSlider():
 
     def crack_slider(self,distance):
         slider = self.wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'yidun_slider')))
-        # time.sleep(2)
         ActionChains(self.driver).click_and_hold(slider).perform()
         ActionChains(self.driver).move_by_offset(xoffset=distance+8, yoffset=0).perform()
         ActionChains(self.driver).release().perform()
@@ -70,16 +72,18 @@ class CrackSlider():
         # validate_element = self.driver.find_element(By.ID,"validate")  # 4.0更新的用法
         time.sleep(0.5)
         validate = validate_element.get_attribute('outerHTML')
-        # self.driver.close()
         validate = re.findall(re.compile('>(.*?)</div'),validate)[0]
         return validate
 
 def get_validate(validate_list):
     cs = CrackSlider()
     cs.open()
-    while True:
-        cs = CrackSlider()
-        cs.open()
+    print("初始化完毕")
+    num = 0
+    start = time.time()
+    max_num = 100
+    while num<max_num and validate_list[0]!="end":
+        num += 1
         try:
             cs.get_pic()
             # 比对五个已知图片，用于确定缺口图片为哪副
@@ -90,11 +94,20 @@ def get_validate(validate_list):
             distance = find_distance(fileorder)
             if distance != 0:
                 validate = cs.crack_slider(distance)
-            if validate != "": 
+            if validate!="":
                 validate_list.append(validate)
+                print(validate_list[-1])
+                print(len(validate_list))
+                cs.refresh()
+            else:
+                print("wrong")
         except Exception as e:
             print("获取校验码错误，已重试：%s"%e)
-        cs.refresh()
+            cs.refresh()
+            continue
+    cs.stop()
+    end = time.time()
+    print("TIME:{}".format(end-start))
 
 if __name__ == '__main__':
     import threading
@@ -108,14 +121,8 @@ if __name__ == '__main__':
         def run(self):                   #把要执行的代码写到run函数里面 线程在创建后会直接运行run函数 
             print("Starting " + self.threadID)
             self.func(self.list)
-    validate_list = []
+    validate_list = ["running"]
     thread1 = myThread("1", get_validate, validate_list)
     thread1.start()
-    def f2(validate_list):
-        while True:
-            print(f"len:{len(validate_list)}")
-            if len(validate_list)!=0:
-                print(validate_list.pop())
-            time.sleep(1)
-    thread2 = myThread("2", f2, validate_list)
-    thread2.start()
+    input("停止请键入enter:")
+    validate_list[0] = "end"

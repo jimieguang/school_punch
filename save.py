@@ -1,6 +1,9 @@
 import requests
 import json
-import datetime #获取系统时间
+import time
+import threading
+# import datetime #获取系统时间
+# import random
 
 
 import get_validate
@@ -47,7 +50,7 @@ def login(url_login,payload_login,header):
     payload_login = json.dumps(payload_login)
     #post传入的数据是json类型
     #增加了请求超时设定 timeout=2
-    info_login = requests.post(url_login, data = payload_login, headers = header,timeout = 5)
+    info_login = requests.post(url_login, data = payload_login, headers = header,timeout = 2)
     #关闭请求，释放内存
     info_login.close()
     return info_login.text
@@ -73,42 +76,56 @@ def punch(url_punch,info_get,header):
     for i in range(1,41):
         if dict_get['data']['secondTable']['other%d'%i] != '':
             secondTable['other%d'%i] = dict_get['data']['secondTable']['other%d'%i]
+        # 愚蠢的三次虚假体温(暂时不用了)
+        # temp_judge = 0
+        # if temp_judge == 0:
+        #     temp = 36.5
+        #     date_now = datetime.datetime.now()
+        #     date_yesterday = date_now - datetime.timedelta(days=1)
+        #     secondTable['other29'] = temp + 0.1*random.randint(-5,5)
+        #     secondTable['other30'] = str(date_now.date())
+        #     secondTable['other31'] = temp + 0.1*random.randint(-5,5)
+        #     secondTable['other32'] = str(date_yesterday.date())
+        #     secondTable['other33'] = temp + 0.1*random.randint(-5,5)
+        #     secondTable['other34'] = str(date_yesterday.date())
+        #     temp_judge = 1
+
     payload_punch = {
-	"mainTable": {
-        "passAreaC2":"中国",
-        "passAreaC3":"%s"%secondTable['other4'],
-        "passAreaC4":"%s"%secondTable['other6'],
-        "leaveTransportationOther":"html5",
-        "other":"%s"%dict_get['data']['mainTable']['other'],
-		"way2Start": "",
-		"language": "cn",
-		"declareTime": "%s"%dict_get['data']['declare_time'],
-		"personNo": "%s"%dict_get['data']['jnuId'],
-		"personName": "%s"%dict_get['data']['xm'],
-		"sex": "%s"%dict_get['data']['xbm'],
-		"professionName": "%s"%dict_get['data']['zy'],
-		"collegeName": "%s"%dict_get['data']['yxsmc'],
-		"phoneArea": "%s"%dict_get['data']['mainTable']['phoneArea'],
-		"phone": "%s"%dict_get['data']['mainTable']['phone'],
-		"assistantName": "%s"%dict_get['data']['mainTable']['assistantName'],
-		"assistantNo": "%s"%dict_get['data']['mainTable']['assistantNo'],
-		"className": "%s"%dict_get['data']['mainTable']['className'],
-		"linkman": "%s"%dict_get['data']['mainTable']['linkman'],
-		"linkmanPhoneArea": "%s"%dict_get['data']['mainTable']['linkmanPhoneArea'],
-		"linkmanPhone": "%s"%dict_get['data']['mainTable']['linkmanPhone'],
-		"personHealth": "%s"%dict_get['data']['mainTable']['personHealth'],
-		"temperature": "%s"%dict_get['data']['mainTable']['temperature'],
-		"personHealth2": "%s"%dict_get['data']['mainTable']['personHealth2'],
-		"schoolC1": "%s"%dict_get['data']['mainTable']['schoolC1'],
-		"currentArea": "%s"%dict_get['data']['mainTable']['currentArea'],
-		"personC4": "%s"%dict_get['data']['mainTable']['personC4'],
-		"otherC4": "%s"%dict_get['data']['mainTable']['otherC4'],
-		"isPass14C1": "%s"%dict_get['data']['mainTable']['isPass14C1'],
-		"isPass14C2": "%s"%dict_get['data']['mainTable']['isPass14C2'],
-		"isPass14C3": "%s"%dict_get['data']['mainTable']['isPass14C3']
-	},
-	"secondTable": secondTable,
-	"jnuid": "%s"%jnuid
+        "mainTable": {
+            "passAreaC2":"中国",
+            "passAreaC3":"%s"%secondTable['other4'],
+            "passAreaC4":"%s"%secondTable['other6'],
+            "leaveTransportationOther":"html5",
+            "other":"%s"%dict_get['data']['mainTable']['other'],
+            "way2Start": "",
+            "language": "cn",
+            "declareTime": "%s"%dict_get['data']['declare_time'],
+            "personNo": "%s"%dict_get['data']['jnuId'],
+            "personName": "%s"%dict_get['data']['xm'],
+            "sex": "%s"%dict_get['data']['xbm'],
+            "professionName": "%s"%dict_get['data']['zy'],
+            "collegeName": "%s"%dict_get['data']['yxsmc'],
+            "phoneArea": "%s"%dict_get['data']['mainTable']['phoneArea'],
+            "phone": "%s"%dict_get['data']['mainTable']['phone'],
+            "assistantName": "%s"%dict_get['data']['mainTable']['assistantName'],
+            "assistantNo": "%s"%dict_get['data']['mainTable']['assistantNo'],
+            "className": "%s"%dict_get['data']['mainTable']['className'],
+            "linkman": "%s"%dict_get['data']['mainTable']['linkman'],
+            "linkmanPhoneArea": "%s"%dict_get['data']['mainTable']['linkmanPhoneArea'],
+            "linkmanPhone": "%s"%dict_get['data']['mainTable']['linkmanPhone'],
+            "personHealth": "%s"%dict_get['data']['mainTable']['personHealth'],
+            "temperature": "%s"%dict_get['data']['mainTable']['temperature'],
+            "personHealth2": "%s"%dict_get['data']['mainTable']['personHealth2'],
+            "schoolC1": "%s"%dict_get['data']['mainTable']['schoolC1'],
+            "currentArea": "%s"%dict_get['data']['mainTable']['currentArea'],
+            "personC4": "%s"%dict_get['data']['mainTable']['personC4'],
+            "otherC4": "%s"%dict_get['data']['mainTable']['otherC4'],
+            "isPass14C1": "%s"%dict_get['data']['mainTable']['isPass14C1'],
+            "isPass14C2": "%s"%dict_get['data']['mainTable']['isPass14C2'],
+            "isPass14C3": "%s"%dict_get['data']['mainTable']['isPass14C3']
+        },
+        "secondTable": secondTable,
+        "jnuid": "%s"%jnuid
     }
     payload_punch = json.dumps(payload_punch)
     info_punch = requests.post(url_punch,data = payload_punch,headers = header, timeout = 2)
@@ -117,7 +134,7 @@ def punch(url_punch,info_get,header):
     return info_punch.text
 
 
-def main(infos,validate=''):
+def main(infos,validate_list):
     '''主要的执行函数'''
     msg = ""
     #保存错误日志
@@ -130,34 +147,45 @@ def main(infos,validate=''):
             #设置最大重连次数与初始化（因为时效性，携带着验证码参数进行重连才可以）
             try_num = 0
             try_max_num = 3
-            while try_num < try_max_num:
+            temp = ''
+            while try_num < try_max_num and validate_list[0]!="error":
+                while len(validate_list)<=1:
+                    # print("阻塞ing")
+                    time.sleep(0.5)
+                    pass
+                validate = validate_list.pop()
                 try:
-                    #获取验证码参数
-                    if validate=="":
-                        validate = get_validate.get_validate()
                     payload_login = {'username': "%s"%account, 'password': "%s"%password,'validate':'%s'%validate}
                     info_login = login(url_login,payload_login,header)
                     if '登录成功，今天未填写' in info_login:
                         info_get = get(url_get,info_login,header)
                         info_punch = punch(url_punch,info_get,header)
                         if '成功' in info_punch:
-                            msg += '%s自动打卡已完成！\n'%name
+                            temp = '%s自动打卡已完成！\n'%name
+                            msg += temp
                         else:
-                            msg += '%s出现未知问题，请检查！\n'%name
+                            temp = '%s出现未知问题，请检查！\n'%name
+                            msg += temp
                     elif 'error' in info_login:
-                        msg += '%s账号密码错误，请检查！\n'%name
+                        temp = '%s账号密码错误，请检查！\n'%name
+                        msg += temp
                     elif '登录成功，今天已填写' in info_login:
-                        msg += '%s无需重复打卡！\n'%name
+                        temp = '%s无需重复打卡！\n'%name
+                        msg += temp
+                    elif '行为验证码验证失败' in info_login:
+                        temp = '%s行为验证失败！\n'%name
+                        msg += temp
                     else:
-                        msg += "未知返回数据：%s\n"%info_login
+                        temp = "未知返回数据：%s\n"%info_login
+                        msg += temp
                     break
-                except(requests.exceptions.ConnectTimeout,requests.exceptions.ReadTimeout) as e:
+                except(requests.exceptions.ConnectTimeout,requests.exceptions.ReadTimeout,requests.exceptions.ConnectionError) as e:
                     try_num += 1
                     msg_error += '%s打卡请求超时%d次！\n'%(name, try_num)
-                    msg_error += '错误信息为%s\n'%e
+                    msg_error += '错误信息为:%s\n'%e
                     if try_num == try_max_num:
                         msg += '%s自动打卡失败\n'%name
-            print('请查看%s的打卡信息'%name)
+            print(temp.rstrip())
     except IndexError:
         pass
     mail_web(msg)
@@ -166,7 +194,7 @@ def main(infos,validate=''):
 
 
 def mail_web(msg):
-    '''将信息推送到群里'''
+    '''将消息发送到服务器上待查询,并将信息推送到群里'''
     if msg !='':
         # 推送到群里
         robot = qmsg.Robot()
@@ -183,11 +211,21 @@ def mail(msg):
         payload = {'action':'write','infos':msg}
         requests.post(url,data=payload)
 
+class myThread (threading.Thread):   #继承父类threading.Thread
+    """多线程类"""
+    def __init__(self, threadID, function_name,list):
+        threading.Thread.__init__(self)
+        self.threadID = threadID
+        self.func = function_name
+        self.list = list
+    def run(self):                   #把要执行的代码写到run函数里面 线程在创建后会直接运行run函数 
+        print("Starting " + self.threadID)
+        self.func(self.list)
+
 if __name__ == '__main__':
     # 补救名单
     infos = get_userinfos()
-
-    save_list = ["林饱饱","耶","cn","JNU气人","LLLLLLL","飞飞鱼","我是熊猫"]
+    save_list = ["樊**"]
     #调用打卡主程序
     punch_infos = []
     for info in infos:
@@ -196,11 +234,15 @@ if __name__ == '__main__':
         if info.split("  ")[2] in save_list:
             punch_infos.append(info)
     try:
-        msg = main(punch_infos)
+        #调用打卡主程序
+        validate_list = ["running"]
+        #多线程获取验证码
+        thread1 = myThread("1", get_validate.get_validate, validate_list)
+        thread1.start()
+        msg = main(punch_infos,validate_list)
     except Exception as e:
         print(e)
+    validate_list[0] = "end"
     #附加功能，如显示打卡时间
     print(msg)
     print('\n')
-    #打包成exe时需取消注释
-    input('按enter键退出程序')

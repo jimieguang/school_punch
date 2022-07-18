@@ -5,7 +5,6 @@ import time
 # import random
 
 
-import get_validate
 import qmsg
 
 #设置请求头，防止被发现
@@ -35,14 +34,6 @@ url_login = 'https://stuhealth.jnu.edu.cn/api/user/login'
 url_get = 'https://stuhealth.jnu.edu.cn/api/user/stuinfo'
 url_punch = 'https://stuhealth.jnu.edu.cn/api/write/main'
 
-def get_userinfos():
-    '''以列表形式返回用户信息'''
-    url = 'https://www.hlamemastar.top/punch/punch.txt'
-    response = requests.get(url)
-    infos = response.content
-    infos = infos.decode('utf-8')
-    infos = infos.split("\r\n")
-    return infos
 
 def login(url_login,payload_login,header):
     '''检查是否已打卡'''
@@ -133,27 +124,34 @@ def punch(url_punch,info_get,header):
     return info_punch.text
 
 
-def main(validate_list):
-    '''主要的执行函数'''
-    msg = ""
+def main(validate_list,user_infos):
+    '''主要的执行函数，需要传入验证码与用户信息（列表形式）'''
+    # 获取本地时间（月日）
+    date_now = str(time.localtime().tm_mon) + "月" + str(time.localtime().tm_mday) + "日"
+    msg = date_now + "\n"
     #保存错误日志
     msg_error = ""
-    infos = get_userinfos()
     try:
-        for info in infos:
-            account = info.split()[0]
-            password = info.split()[1]
-            name = info.split()[2]
+        for user_info in user_infos:
+            account = user_info.split()[0]
+            password = user_info.split()[1]
+            name = user_info.split()[2]
             #设置最大重连次数与初始化（因为时效性，携带着验证码参数进行重连才可以）
             try_num = 0
             try_max_num = 3
             temp = ''
-            while try_num < try_max_num:
-                while len(validate_list)==0:
+            while try_num < try_max_num and validate_list[0]!="error":
+                validate_try_num = 0
+                while len(validate_list)<=1 and validate_try_num<10:
                     # print("阻塞ing")
                     time.sleep(0.5)
-                    pass
-                validate = validate_list.pop(0)
+                    validate_try_num += 1
+                # 未获取成功验证码则跳至下一用户
+                if len(validate_list)<=1:
+                    temp = '%s 验证码获取超时！\n'%name
+                    msg += temp
+                    break
+                validate = validate_list.pop()
                 try:
                     payload_login = {'username': "%s"%account, 'password': "%s"%password,'validate':'%s'%validate}
                     info_login = login(url_login,payload_login,header)
@@ -161,16 +159,19 @@ def main(validate_list):
                         info_get = get(url_get,info_login,header)
                         info_punch = punch(url_punch,info_get,header)
                         if '成功' in info_punch:
-                            temp = '%s自动打卡已完成！\n'%name
+                            temp = '%s 自动打卡已完成！\n'%name
                             msg += temp
                         else:
-                            temp = '%s出现未知问题，请检查！\n'%name
+                            temp = '%s 出现未知问题，请检查！\n'%name
                             msg += temp
                     elif 'error' in info_login:
-                        temp = '%s账号密码错误，请检查！\n'%name
+                        temp = '%s 账号密码错误，请检查！\n'%name
                         msg += temp
                     elif '登录成功，今天已填写' in info_login:
-                        temp = '%s无需重复打卡！\n'%name
+                        temp = '%s 无需重复打卡！\n'%name
+                        msg += temp
+                    elif '行为验证码验证失败' in info_login:
+                        temp = '%s 行为验证失败！\n'%name
                         msg += temp
                     else:
                         temp = "未知返回数据：%s\n"%info_login
@@ -178,89 +179,25 @@ def main(validate_list):
                     break
                 except(requests.exceptions.ConnectTimeout,requests.exceptions.ReadTimeout,requests.exceptions.ConnectionError) as e:
                     try_num += 1
-                    msg_error += '%s打卡请求超时%d次！\n'%(name, try_num)
+                    msg_error += '%s 打卡请求超时%d次！\n'%(name, try_num)
                     msg_error += '错误信息为:%s\n'%e
                     if try_num == try_max_num:
-                        msg += '%s自动打卡失败\n'%name
+                        temp = '%s 自动打卡失败\n'%name
+                        msg += temp
             print(temp.rstrip())
     except IndexError:
         pass
-    mail_web(msg)
-    mail(msg_error)
-    return msg
+    error_log(msg_error.rstrip(),date_now)
+    return msg.rstrip()
 
-
-def mail_web(msg):
-    '''将消息发送到服务器上待查询,并将信息推送到群里'''
+def error_log(msg,date_now):
+    '''将消息发送到群主QQ(使用qmsg),并将错误信息写入本地文件(追加模式）'''
     if msg !='':
-        # 发送到服务器
-        url = 'https://www.hlamemastar.top/qqrobot/punch_info.php'
-        payload = {'action':'write','infos':msg}
-        requests.post(url,data=payload)
-        # 推送到群里
-        robot = qmsg.Robot()
-        robot.mail_group(281700803,msg)
-
-def mail(msg):
-    '''将消息发送到群主QQ(使用qmsg),并将错误信息写入服务器'''
-    if msg !='':
+        #添加时间戳
+        msg = date_now + "\n" + msg
         # 发送qq
         robot = qmsg.Robot()
         robot.mail_private(1137040634,msg)
-        # 写入服务器
-        url = 'https://www.hlamemastar.top/qqrobot/punch_error.php'
-        payload = {'action':'write','infos':msg}
-        requests.post(url,data=payload)
-
-def get_weather(msg):
-    '''获取天气信息'''
-    params = 'key=c0a288bbaa1f4ab3a64dfd6213d24074&location=101280704'
-    url = 'https://devapi.qweather.com/v7/weather/3d?%s'%params
-    info = requests.get(url)
-    #把双引号转化为单引号才可以变成字典型数据
-    info = eval(info.text)
-    info = dict(info)
-    time = info['daily'][0]['fxDate']
-    tempMin = info['daily'][0]['tempMin']
-    tempMax = info['daily'][0]['tempMax']
-    textDay = info['daily'][0]['textDay']
-    textNight = info['daily'][0]['textNight']
-    windDirDay = info['daily'][0]['windDirDay']
-    windScaleDay = info['daily'][0]['windScaleDay']
-    sunrise = info['daily'][0]['sunrise']
-    sunset = info['daily'][0]['sunset']
-    #对天气信息进行处理
-    if textDay == textNight:
-        weather_info = textDay
-    else:
-        weather_info =textDay + "转" + textNight
-    msg += f"\n{time}天气预报\n温度:{tempMin}~{tempMax}℃\n天气:{weather_info}\n风向:{windDirDay+windScaleDay}级\n日出时间:{sunrise}\n日落时间:{sunset}"
-    return msg
-
-def detect():
-    '''检测今日是否打卡（返回值是布尔型）'''
-    url = 'https://www.hlamemastar.top/qqrobot/punch_info.txt'
-    response = requests.get(url)
-    res = response.content.decode('utf-8')
-    if "今日暂未打卡，请耐心等待" in res: 
-        return True
-    else:
-        return False
-
-if __name__ == '__main__':
-    # 如果今日已打卡，直接退出该程序
-    if not detect():
-        print('今日已打卡')
-        exit()
-    #调用打卡主程序
-    try:
-        msg = main()
-    except Exception as e:
-        print(e)
-    #附加功能，如显示打卡时间
-    #添加天气预报
-    msg = get_weather(msg)
-    print(msg)
-    print('\n')
-    #打包成exe时需取消注释
-    input('按enter键退出程序')
+        # 保存错误日志
+        with open("error_log.txt","a",encoding="utf-8") as f:
+            f.write(msg)

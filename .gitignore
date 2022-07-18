@@ -1,3 +1,6 @@
 
 temp/
 geckodriver.log
+*.pyc
+start.bat
+*.txt

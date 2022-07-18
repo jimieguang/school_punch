@@ -16,7 +16,9 @@
 #3.9更新日志：修改了获取验证码和进度输出的部分逻辑，留出空间后续实现“打卡补救”措施
 #3.10更新日志：修复了新加用户不显示的问题，提高了获取验证码的成功率（增加伪装js）
 #3.11更新日志：增加了三次虚假体温
-#4.0更新日志：使用多线程，同时进行验证码的获取与打卡的进行，提高效率
+#4.0更新日志：使用多线程，并行获取验证码与打卡，提高效率
+#4.1更新日志：增加了验证码获取超时的异常处理，将信息的记录与获取改至本地
+#4.2更新日志：优化了日志记录逻辑，调整了代码结构
 import requests
 import threading
 import time
@@ -51,15 +53,53 @@ def get_weather(msg):
     msg += f"\n{time}天气预报\n温度:{tempMin}~{tempMax}℃\n天气:{weather_info}\n风向:{windDirDay+windScaleDay}级\n日出时间:{sunrise}\n日落时间:{sunset}"
     return msg
 
-def detect():
-    '''检测今日是否打卡（返回值是布尔型）'''
-    url = 'https://www.hlamemastar.top/qqrobot/punch_info.txt'
+def get_userinfos():
+    '''以列表形式返回用户信息'''
+    url = 'https://www.hlamemastar.top/punch/punch.txt'
     response = requests.get(url)
-    res = response.content.decode('utf-8')
-    if "今日暂未打卡，请耐心等待" in res: 
-        return True
+    infos = response.content
+    infos = infos.decode('utf-8')
+    infos = infos.split("\r\n")
+    return infos
+
+def get_saverinfos(savers):
+    '''匹配打卡出错的用户，以列表形式返回其相关信息'''
+    res = []
+    users = get_userinfos()
+    for user in users:
+        if user.split("  ")[2] in savers:
+            res.append(user)
+    return res
+
+def detect():
+    '''打卡信息检测（尚未打卡：0，打卡成功：1，存在异常：list）'''
+    # 获取本地时间（月日）
+    date_now = str(time.localtime().tm_mon) + "月" + str(time.localtime().tm_mday) + "日"
+    # 以列表形式读取打卡信息
+    with open("info_log.txt","r",encoding="utf-8") as f:
+        info_logs = f.readlines()
+    if info_logs[0] != date_now:
+        return 0              #今日尚未打卡
+    success_keywords = ["自动打卡已完成","无需重复打卡"]
+    res = []                              # 异常日志
+    for info_log in info_logs[1:]:        # 第一行固定储存打卡日期
+        infos = info_log.split(" ", 2)    # 将信息拆分为昵称与状态
+        if infos[1] not in success_keywords:
+            res.append(infos[0])
+    if len(res)==0:
+        return 1              #打卡成功
     else:
-        return False
+        return res            #存在异常
+
+def info_log(msg,mode):
+    '''将消息保存至本地待查询,并将信息推送到群里,mode为文件打开模式'''
+    if msg !='':
+        # 保存至服务器
+        with open("info_log.txt",mode,encoding="utf-8") as f:
+            f.write(msg)
+        # 推送到群里
+        robot = qmsg.Robot()
+        robot.mail_group(281700803,msg)
 
 class myThread (threading.Thread):   #继承父类threading.Thread
     """多线程类"""
@@ -73,17 +113,31 @@ class myThread (threading.Thread):   #继承父类threading.Thread
         self.func(self.list)
 
 if __name__ == '__main__':
-    # 如果今日已打卡，直接退出该程序
-    if not detect():
-        print('今日已打卡')
+    # 对打卡状态进行检测，根据结果进行相应操作
+    status = detect()
+    if status == 1:
+        print("今日已打卡！")
         exit()
+    elif status == 0:
+        print("今日暂未打卡！")
+        user_infos = get_userinfos()
+    else:
+        print("部分打卡异常，实施补救！")
+        user_infos = get_saverinfos(status)
     #调用打卡主程序
-    validate_list = []
+    validate_list = ["running"]
     #多线程获取验证码
     thread1 = myThread("1", get_validate.get_validate, validate_list)
     thread1.start()
     try:
-        msg = punch.main(validate_list)
+        msg = punch.main(validate_list,user_infos)
+        if status == 0:
+            info_log(msg,"w")
+        else:
+            info_log(msg,"r")
     except Exception as e:
         print(e)
+    # 停止子进程
+    validate_list[0] = "end"
+    
     #附加功能，如显示打卡时间
