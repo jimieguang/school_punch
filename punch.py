@@ -187,8 +187,8 @@ def main(validate_list,user_infos):
             print(temp.rstrip())
     except IndexError:
         pass
-    error_log(msg_error.rstrip(),date_now)
-    return msg.rstrip()
+    error_log(msg_error,date_now)
+    return msg
 
 def error_log(msg,date_now):
     '''将消息发送到群主QQ(使用qmsg),并将错误信息写入本地文件(追加模式）'''
@@ -197,7 +197,7 @@ def error_log(msg,date_now):
         msg = date_now + "\n" + msg
         # 发送qq
         robot = qmsg.Robot()
-        robot.mail_private(1137040634,msg)
+        robot.mail_private(1137040634,msg.rstrip())
         # 保存错误日志
         with open("error_log.txt","a",encoding="utf-8") as f:
-            f.write(msg)
+            f.write(msg) 

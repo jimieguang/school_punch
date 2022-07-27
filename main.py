@@ -19,6 +19,7 @@
 #4.0更新日志：使用多线程，并行获取验证码与打卡，提高效率
 #4.1更新日志：增加了验证码获取超时的异常处理，将信息的记录与获取改至本地
 #4.2更新日志：优化了日志记录逻辑，调整了代码结构
+#4.3更新日志：基本实现了“打卡补救”，修复了部分bug
 import requests
 import threading
 import time
@@ -55,11 +56,9 @@ def get_weather(msg):
 
 def get_userinfos():
     '''以列表形式返回用户信息'''
-    url = 'https://www.hlamemastar.top/punch/punch.txt'
-    response = requests.get(url)
-    infos = response.content
-    infos = infos.decode('utf-8')
-    infos = infos.split("\r\n")
+    with open("users.txt",'r',encoding='utf-8') as f:
+        infos = f.read().rstrip()
+    infos = infos.split("\n")
     return infos
 
 def get_saverinfos(savers):
@@ -77,15 +76,21 @@ def detect():
     date_now = str(time.localtime().tm_mon) + "月" + str(time.localtime().tm_mday) + "日"
     # 以列表形式读取打卡信息
     with open("info_log.txt","r",encoding="utf-8") as f:
-        info_logs = f.readlines()
-    if info_logs[0] != date_now:
+        info_logs = f.readlines()         # readlines会将行尾换行符保留
+    if info_logs[0].rstrip() != date_now:
         return 0              #今日尚未打卡
-    success_keywords = ["自动打卡已完成","无需重复打卡"]
+    success_keywords = ["自动打卡已完成！","无需重复打卡！"]
+    judge = 0                             # 检测参数
     res = []                              # 异常日志
     for info_log in info_logs[1:]:        # 第一行固定储存打卡日期
         infos = info_log.split(" ", 2)    # 将信息拆分为昵称与状态
-        if infos[1] not in success_keywords:
-            res.append(infos[0])
+        try:  #如检测到已进行补救则将补救成功的人员从名单中删除
+            if judge == 0 and infos[1].rstrip() not in success_keywords:
+                res.append(infos[0])
+            if judge == 1 and infos[1].rstrip() in success_keywords:
+                res.remove(infos[0])
+        except IndexError:
+            judge = 1
     if len(res)==0:
         return 1              #打卡成功
     else:
@@ -99,7 +104,7 @@ def info_log(msg,mode):
             f.write(msg)
         # 推送到群里
         robot = qmsg.Robot()
-        robot.mail_group(281700803,msg)
+        robot.mail_group(281700803,msg.rstrip())
 
 class myThread (threading.Thread):   #继承父类threading.Thread
     """多线程类"""
@@ -116,7 +121,7 @@ if __name__ == '__main__':
     # 对打卡状态进行检测，根据结果进行相应操作
     status = detect()
     if status == 1:
-        print("今日已打卡！")
+        print("今日已打卡且无任何异常！")
         exit()
     elif status == 0:
         print("今日暂未打卡！")
@@ -134,7 +139,7 @@ if __name__ == '__main__':
         if status == 0:
             info_log(msg,"w")
         else:
-            info_log(msg,"r")
+            info_log(msg,"a")
     except Exception as e:
         print(e)
     # 停止子进程

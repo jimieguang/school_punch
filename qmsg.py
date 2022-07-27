@@ -2,7 +2,7 @@ import requests
 
 class Robot:
     def __init__(self):
-        self.ip = "106.52.3.250"
+        self.ip = "192.168.199.163"
         self.port = "7600"
 
     def mail_private(self,user_id,msg):
@@ -24,5 +24,5 @@ class Robot:
         print(response.text)
 if __name__ == "__main__":
     robot = Robot()
-    # robot.mail_private(1137040634,"test")
-    robot.mail_group(1018867238,"test")
+    robot.mail_private(1137040634,"test")
+    # robot.mail_group(1018867238,"test")
