@@ -20,13 +20,13 @@
 #4.1更新日志：增加了验证码获取超时的异常处理，将信息的记录与获取改至本地
 #4.2更新日志：优化了日志记录逻辑，调整了代码结构
 #4.3更新日志：基本实现了“打卡补救”，修复了部分bug
+#5.0更新日志：代号“Last Order”的最后一次维护
 import requests
 import threading
 import time
 
 
 import get_validate
-import qmsg
 import punch
 
 def get_weather(msg):
@@ -97,14 +97,11 @@ def detect():
         return res            #存在异常
 
 def info_log(msg,mode):
-    '''将消息保存至本地待查询,并将信息推送到群里,mode为文件打开模式'''
+    '''将消息保存至本地待查询mode为文件打开模式'''
     if msg !='':
-        # 保存至服务器
+        # 保存至本地日志
         with open("info_log.txt",mode,encoding="utf-8") as f:
             f.write(msg)
-        # 推送到群里
-        robot = qmsg.Robot()
-        robot.mail_group(281700803,msg.rstrip())
 
 class myThread (threading.Thread):   #继承父类threading.Thread
     """多线程类"""
@@ -130,7 +127,7 @@ if __name__ == '__main__':
         print("部分打卡异常，实施补救！")
         user_infos = get_saverinfos(status)
     #调用打卡主程序
-    validate_list = ["running"]
+    validate_list = ["waiting"]
     #多线程获取验证码
     thread1 = myThread("1", get_validate.get_validate, validate_list)
     thread1.start()
@@ -141,7 +138,8 @@ if __name__ == '__main__':
         else:
             info_log(msg,"a")
     except Exception as e:
-        print(e)
+        print(msg)
+        print(f"Unexpected Error:{e}")
     # 停止子进程
     validate_list[0] = "end"
     

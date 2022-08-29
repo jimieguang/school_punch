@@ -3,19 +3,23 @@ from PIL import Image
 import time
 def find_pic(order):
     '''匹配缺口'''
-    image1 = Image.open("./test/new%d.jpg"%order)
     image2 = Image.open("./temp/target.jpg")
+    w,h = image2.size
+    if w==480:
+        image1 = Image.open("./temp/480-240/new%d.jpg"%order)
+    else:
+        image1 = Image.open("./temp/320-160/new%d.jpg"%order)
 
     #转成灰度图提高匹配速度（像素值以array形式储存）
     array1 = image1.convert("L").load()
     array2 = image2.convert("L").load()
 
-    image3 = Image.new("L",(320,160),255)
+    image3 = Image.new("L",(w,h),255)
     #定义检测的最大像素值
-    Maxnum = 6000
+    Maxnum = 6000*(w/320)
     num = 0
-    for i in range(0,320):
-        for j in range(0,160):
+    for i in range(0,w):
+        for j in range(0,h):
             mean1 = array1[i,j]
             mean2 = array2[i,j]
             if mean1 !=0:
@@ -41,15 +45,16 @@ def find_distance(fileorder):
     if fileorder == 0:
         return 0
     image = Image.open("./temp/result-%d.png"%fileorder)
+    w,h = image.size
     array = image.load()
     judgelist = [0,126]
-    for i in range(0,320):
+    for i in range(0,w):
         num = 0
-        for j in range(0,160):
+        for j in range(0,h):
             mean = array[i,j]
             if mean in judgelist:
                 num += 1
-        if num > 20:
+        if num > 20*(w/320):
             return i
     return 0
 

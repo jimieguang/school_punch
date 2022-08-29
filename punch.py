@@ -1,11 +1,12 @@
 import requests
 import json
 import time
+from Crypto.Cipher import AES
+import base64
 # import datetime #获取系统时间
 # import random
 
 
-import qmsg
 
 #设置请求头，防止被发现
 header={
@@ -34,6 +35,18 @@ url_login = 'https://stuhealth.jnu.edu.cn/api/user/login'
 url_get = 'https://stuhealth.jnu.edu.cn/api/user/stuinfo'
 url_punch = 'https://stuhealth.jnu.edu.cn/api/write/main'
 
+def encrypt(password) -> str:
+        '''打卡密码加密'''
+        # Init
+        CRYPTOJSKEY = 'xAt9Ye&SouxCJziN'.encode('utf-8')
+        BS = AES.block_size
+        def _pad(s): return s + (BS - len(s) % BS) * chr(BS - len(s) % BS)
+        # Hash
+        cipher = AES.new(CRYPTOJSKEY, AES.MODE_CBC, CRYPTOJSKEY)
+        enrypted = cipher.encrypt(_pad(password).encode('utf-8'))
+        enrypted = base64.b64encode(enrypted).decode('utf-8')
+        enrypted = enrypted.replace('/', '_').replace('+', '-').replace('=', '*', 1)
+        return enrypted
 
 def login(url_login,payload_login,header):
     '''检查是否已打卡'''
@@ -62,10 +75,13 @@ def punch(url_punch,info_get,header):
     '''进行打卡操作'''
     dict_get = json.loads(info_get)
     #将获取数据中非空字符串提取出来
-    secondTable = {}
-    for i in range(1,41):
-        if dict_get['data']['secondTable']['other%d'%i] != '':
-            secondTable['other%d'%i] = dict_get['data']['secondTable']['other%d'%i]
+    try: #捕获secendTable关键词异常以分析原因
+        secondTable = {}
+        for i in range(1,41):
+            if dict_get['data']['secondTable']['other%d'%i] != '':
+                secondTable['other%d'%i] = dict_get['data']['secondTable']['other%d'%i]
+    except KeyError:
+        return info_get
         # 愚蠢的三次虚假体温(暂时不用了)
         # temp_judge = 0
         # if temp_judge == 0:
@@ -141,9 +157,12 @@ def main(validate_list,user_infos):
             try_max_num = 3
             temp = ''
             while try_num < try_max_num and validate_list[0]!="error":
+                # 等待selenium初始化
+                while validate_list[0]=="waiting":
+                    time.sleep(1)
                 validate_try_num = 0
                 while len(validate_list)<=1 and validate_try_num<10:
-                    # print("阻塞ing")
+                    print("阻塞ing")
                     time.sleep(0.5)
                     validate_try_num += 1
                 # 未获取成功验证码则跳至下一用户
@@ -152,6 +171,7 @@ def main(validate_list,user_infos):
                     msg += temp
                     break
                 validate = validate_list.pop()
+                password = encrypt(password)
                 try:
                     payload_login = {'username': "%s"%account, 'password': "%s"%password,'validate':'%s'%validate}
                     info_login = login(url_login,payload_login,header)
@@ -164,6 +184,7 @@ def main(validate_list,user_infos):
                         else:
                             temp = '%s 出现未知问题，请检查！\n'%name
                             msg += temp
+                            msg_error += info_punch
                     elif 'error' in info_login:
                         temp = '%s 账号密码错误，请检查！\n'%name
                         msg += temp
@@ -172,6 +193,10 @@ def main(validate_list,user_infos):
                         msg += temp
                     elif '行为验证码验证失败' in info_login:
                         temp = '%s 行为验证失败！\n'%name
+                        msg += temp
+                    # 临时处理措施，观察学校服务器后续响应
+                    elif '"code":400' in info_login:
+                        temp = '%s IP已被封禁！(code:400)\n'%name
                         msg += temp
                     else:
                         temp = "未知返回数据：%s\n"%info_login
@@ -191,13 +216,10 @@ def main(validate_list,user_infos):
     return msg
 
 def error_log(msg,date_now):
-    '''将消息发送到群主QQ(使用qmsg),并将错误信息写入本地文件(追加模式）'''
+    '''将错误信息写入本地文件(追加模式）'''
     if msg !='':
         #添加时间戳
         msg = date_now + "\n" + msg
-        # 发送qq
-        robot = qmsg.Robot()
-        robot.mail_private(1137040634,msg.rstrip())
         # 保存错误日志
         with open("error_log.txt","a",encoding="utf-8") as f:
             f.write(msg) 
