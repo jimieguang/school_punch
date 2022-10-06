@@ -26,7 +26,8 @@ import threading
 import time
 
 
-import get_validate
+# import get_validate
+import firefox_gaps as get_validate
 import punch
 
 def get_weather(msg):

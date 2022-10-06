@@ -6,9 +6,9 @@ import base64
 # import datetime #获取系统时间
 # import random
 
-
-
+from get_cookie import get_cookie
 #设置请求头，防止被发现
+cookie = get_cookie()
 header={
     'authority': 'stuhealth.jnu.edu.cn',
     'method': 'POST',
@@ -28,7 +28,10 @@ header={
     'sec-fetch-dest': 'empty',
     'sec-fetch-mode': 'cors',
     'sec-fetch-site': 'same-origin',
-    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.72 Safari/537.36 Edg/90.0.818.42'
+    # 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.72 Safari/537.36 Edg/90.0.818.42'
+    'user-agent':'Mozilla/5.0 (Linux; Android 11; Mi 10 Build/RKQ1.200826.002; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/86.0.4240.99 XWEB/4313 MMWEBSDK/20220805 Mobile Safari/537.36 MMWEBID/6691 MicroMessenger/8.0.27.2220(0x28001B59) WeChat/arm64 Weixin NetType/WIFI Language/zh_CN ABI/arm64',
+    'Cookie':cookie,
+
 }
 #设置请求网址
 url_login = 'https://stuhealth.jnu.edu.cn/api/user/login'
